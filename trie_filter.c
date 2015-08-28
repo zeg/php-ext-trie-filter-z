@@ -140,7 +140,7 @@ PHP_FUNCTION(trie_filter_load)
 /* }}} */
 
 
-static int trie_search_one(Trie *trie, const AlphaChar *text, int *offset, TrieData *length, TrieData *keyword_id)
+static int trie_search_one(Trie *trie, const AlphaChar *text, int *offset, TrieData *length, TrieData *data)
 {
 	TrieState *s;
 	const AlphaChar *p;
@@ -167,7 +167,7 @@ static int trie_search_one(Trie *trie, const AlphaChar *text, int *offset, TrieD
 		if (trie_state_is_terminal(s)) {
 			*offset = text - base;
 			*length = p - text;
-			*keyword_id = trie_state_get_terminal_data(s);
+			*data = trie_state_get_terminal_data(s);
             trie_state_free(s);
             
 			return 1;
