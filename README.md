@@ -7,12 +7,22 @@ php extension for spam word filter based on Double-Array Trie tree, it can detec
 
 ## 升级历史
 
+### 2015-08-28
+
+恢复了在搜索树中储存关键字附加值的功能 修正了非最长匹配取不到附加值的问题
+
+简化trie_filter_search_all返回的结构
+
+详见使用示例
+
 ### 2013-06-23
 trie_filter_search_all，一次返回所有的命中词;修复内存泄露
 
 ## 依赖库
 
-[libdatrie-0.2.4 or later](http://linux.thai.net/~thep/datrie/datrie.html)
+修改过的[libdatrie](https://github.com/zeg/libdatrie-z)
+
+包含有https://github.com/kmike/datrie/中的trie_state_get_terminal_data函数
 
 ## 安装步骤
 
@@ -39,7 +49,7 @@ trie_filter_search_all，一次返回所有的命中词;修复内存泄露
 	$arrWord = array('word1', 'word2', 'word3');
 	$resTrie = trie_filter_new(); //create an empty trie tree
 	foreach ($arrWord as $k => $v) {
-    	trie_filter_store($resTrie, $v);
+    	trie_filter_store($resTrie, $k, $v);//$k为对应此关键字的任意int32附加值 会在trie_filter_search/trie_filter_search_all结果中返回
 	}
 	trie_filter_save($resTrie, __DIR__ . '/blackword.tree');
 
@@ -47,10 +57,19 @@ trie_filter_search_all，一次返回所有的命中词;修复内存泄露
 
 	$strContent = 'hello word2 word1';
 	$arrRet = trie_filter_search($resTrie, $strContent);
-	print_r($arrRet); //Array(0 => 6, 1 => 5)
+	print_r($arrRet); //Array(0 => 6, 1 => 5, 2 => 1)
 	echo substr($strContent, $arrRet[0], $arrRet[1]); //word2
+	
+	
 	$arrRet = trie_filter_search_all($resTrie, $strContent);
-	print_r($arrRet); //Array(0 => Array(0 => 6, 1 => 5), 1 => Array(0 => 12, 1 => 5))
+	print_r($arrRet); //Array(
+	// 0 => 6, 第一个命中词的起始位置
+	// 1 => 5, 第一个命中词的长度
+	// 2 => 1 ,第一个命中词的附加值
+	// 3 => 12, 第二个...
+	// 4 => 5 , 第二个...
+	// 5 => 0   第二个...
+	// ...)
 	
 
 	$arrRet = trie_filter_search($resTrie, 'hello word');
