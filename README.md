@@ -22,7 +22,7 @@ trie_filter_search_all，一次返回所有的命中词;修复内存泄露
 
 修改过的[libdatrie](https://github.com/zeg/libdatrie-z)
 
-包含有https://github.com/kmike/datrie/中的trie_state_get_terminal_data函数
+包含有 https://github.com/kmike/datrie/ 中的trie_state_get_terminal_data函数
 
 ## 安装步骤
 
