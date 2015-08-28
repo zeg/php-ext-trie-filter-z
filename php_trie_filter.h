@@ -53,6 +53,7 @@ PHP_FUNCTION(trie_filter_new);
 PHP_FUNCTION(trie_filter_store);
 PHP_FUNCTION(trie_filter_save);
 PHP_FUNCTION(trie_filter_free);
+//PHP_FUNCTION(trie_filter_retrieve);
 
 #ifdef ZTS
 #define TRIE_FILTER_G(v) TSRMG(trie_filter_globals_id, zend_trie_filter_globals *, v)
