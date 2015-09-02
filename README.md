@@ -99,8 +99,8 @@ trie_filter_search_all，一次返回所有的命中词;修复内存泄露
 
 	$strContent = 'hello wo rd WORD kEy 0123456789';
 	$arrRet = trie_filter_search_all($resTrie, $strContent, TRIE_FILTER_UP|TRIE_FILTER_SP|TRIE_FILTER_NUM);
-	//小写转为大写 数字转为0 忽略关键字中的空格
-	//实际相当于 'HELLO WO RD WORD KEY 0123456789'
+	//小写转为大写 数字转为0 忽略文本中的空格
+	//实际相当于 'HELLOWORDWORDKEY0000000000'
 
 	print_all($strContent, $arrRet);
 
