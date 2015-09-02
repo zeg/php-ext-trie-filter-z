@@ -13,6 +13,7 @@
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
   | Author:  Lijun Wu    <wulijun01234@gmail.com>                           |
+  |          zeg			<zeg.email@gmail.com>
   +----------------------------------------------------------------------+
 */
 
@@ -63,7 +64,23 @@ PHP_FUNCTION(trie_filter_free);
 
 #endif	/* PHP_TRIE_FILTER_H */
 
+#define KEYWORD_MAX_LEN 1024
+#define TRIE_FILTER_UP 1
+#define TRIE_FILTER_SP 2
+#define TRIE_FILTER_NUM 4
 
+
+#define TRIE_SEARCH_ALPHA_PROC(p, opt) if(opt!=0){  \
+while((opt & TRIE_FILTER_SP) && *p==32){  \
+	p++; \
+	if(*p==TRIE_CHAR_TERM) \
+		continue; \
+	} \
+if((opt & TRIE_FILTER_UP) && *p>96 && *p<123) \
+	(*p)-=32; \
+if((opt & TRIE_FILTER_NUM) && *p>47 && *p<58) \
+	(*p)=48; \
+}
 /*
  * Local variables:
  * tab-width: 4

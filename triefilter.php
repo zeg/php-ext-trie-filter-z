@@ -2,7 +2,8 @@
 /**
  * Helper autocomplete for php trie-filter extension
  * @author wulijun01234 <wulijun01234@gmail.com>
- * @link https://github.com/wulijun/php-ext-trie-filter
+ * @auther zeg <zeg.email@gmial.com>
+ * @link https://github.com/zeg/php-ext-trie-filter-z
  */
 
 /**
@@ -20,7 +21,10 @@ function trie_filter_load($strDictFile) {
  * 
  * @param resource $resTree
  * @param string $strContent
- * @return array spam word info, like Array(0 => start position, 1 => spam word len), if no one found, return empty array, false on error.
+ * @param int $flag TRIE_FILTER_UP: all a-z char replace with A-Z
+ *							TRIE_FILTER_SP: ignore space char
+ *							TRIE_FILTER_NUM: char 0-9 replace with 0
+ * @return array spam word info, like Array(0 => start position, 1 => spam word len, 2 => spam word anydata stored in trie_filter_store), if no one found, return empty array, false on error.
  * @example
  * <pre>
  * $arrSpamWord = trie_filter_search($resTree, $strContent);
@@ -29,7 +33,7 @@ function trie_filter_load($strDictFile) {
  * }
  * </pre>
  */
-function trie_filter_search($resTree, $strContent) {
+function trie_filter_search($resTree, $strContent, $flag=0) {
 	
 }
 
@@ -38,18 +42,24 @@ function trie_filter_search($resTree, $strContent) {
  * 
  * @param resource $resTree
  * @param string $strContent
- * @return array spam word info, like Array(Array(0 => start position, 1 => spam word len)), if no one found, return empty array, false on error.
+ *	@param int $flag TRIE_FILTER_UP: all a-z char replace with A-Z
+ *							TRIE_FILTER_SP: ignore space char
+ *							TRIE_FILTER_NUM: char 0-9 replace with 0
+ * @return array spam word info, like 
+	Array(
+		0 => start position, 1 => spam word len , 2 => spam word anydata stored in trie_filter_store ...), if no one found, return empty array, false on error.
  * @example
  * <pre>
  * $arrSpamWord = trie_filter_search_all($resTree, $strContent);
  * if (! empty($arrSpamWord)) {
- *     foreach ($arrSpamWord as $arrOneWord) {
- *         echo substr($strContent, $arrOneWord[0], $arrOneWord[1]);
+		$c = count($arrSpamWord);
+ *     foreach ($i=0;$i<$c;$i+=3) {
+ *         echo $arrSpamWord[$i+2].':'.substr($strContent, $arrSpamWord[$i], $arrSpamWord[$i+1])."\t\n";
  *     }
  * }
  * </pre>
  */
-function trie_filter_search_all($resTree, $strContent) {
+function trie_filter_search_all($resTree, $strContent, $flag=0) {
 	
 }
 
@@ -66,10 +76,14 @@ function trie_filter_new() {
  * Add a word to the trie tree
  * 
  * @param resource $resTree
+ * @param int $anyData
  * @param string $strWord
+ *	@param int $flag TRIE_FILTER_UP: all a-z char replace with A-Z
+ *							TRIE_FILTER_SP: remove space char
+ *							TRIE_FILTER_NUM: char 0-9 replace with 0
  * @return bool true on success or false on error.
  */
-function trie_filter_store($resTree, $strWord) {
+function trie_filter_store($resTree, $anyData, $strWord, $flag=0) {
 
 }
 

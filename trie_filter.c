@@ -10,9 +10,10 @@
   | http://www.php.net/license/3_01.txt                                  |
   | If you did not receive a copy of the PHP license and are unable to   |
   | obtain it through the world-wide-web, please send a note to          |
-  | license@php.net so we can mail you a copy immediately.               |
+  | license@php.net so we can mail you a copy immediately.              |
   +----------------------------------------------------------------------+
-  | Author:  Lijun Wu    <wulijun01234@gmail.com>                           |
+  | Author:  Lijun Wu    <wulijun01234@gmail.com>                     |
+  |          zeg			<zeg.email@gmail.com>
   +----------------------------------------------------------------------+
 */
 
@@ -93,9 +94,14 @@ PHP_MINIT_FUNCTION(trie_filter)
 	le_trie_filter = zend_register_list_destructors_ex(
 			php_trie_filter_dtor, 
 			NULL, PHP_TRIE_FILTER_RES_NAME, module_number);
+	REGISTER_LONG_CONSTANT("TRIE_FILTER_UP", TRIE_FILTER_UP, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("TRIE_FILTER_SP", TRIE_FILTER_SP, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("TRIE_FILTER_NUM", TRIE_FILTER_NUM, CONST_CS | CONST_PERSISTENT);
 	return SUCCESS;
 }
 /* }}} */
+
+
 
 /* {{{ PHP_MSHUTDOWN_FUNCTION
  */
@@ -140,10 +146,10 @@ PHP_FUNCTION(trie_filter_load)
 /* }}} */
 
 
-static int trie_search_one(Trie *trie, const AlphaChar *text, int *offset, TrieData *length, TrieData *data)
+static int trie_search_one(Trie *trie, AlphaChar *text, int *offset, TrieData *length, TrieData *data, long opt)
 {
 	TrieState *s;
-	const AlphaChar *p;
+	AlphaChar *p;
 	const AlphaChar *base;
 
 	base = text;
@@ -151,7 +157,8 @@ static int trie_search_one(Trie *trie, const AlphaChar *text, int *offset, TrieD
         return -1;
     }
 
-	while (*text) {		
+	while (*text) {
+		TRIE_SEARCH_ALPHA_PROC(text, opt);
 		p = text;
 		if (! trie_state_is_walkable(s, *p)) {
             trie_state_rewind(s);
@@ -161,8 +168,10 @@ static int trie_search_one(Trie *trie, const AlphaChar *text, int *offset, TrieD
 			trie_state_walk(s, *p++);
         }
 
-		while (trie_state_is_walkable(s, *p) && ! trie_state_is_terminal(s))
+		while (trie_state_is_walkable(s, *p) && ! trie_state_is_terminal(s)){
 			trie_state_walk(s, *p++);
+			TRIE_SEARCH_ALPHA_PROC(p, opt);
+			}
 
 		if (trie_state_is_terminal(s)) {
 			*offset = text - base;
@@ -181,10 +190,11 @@ static int trie_search_one(Trie *trie, const AlphaChar *text, int *offset, TrieD
 	return 0;
 }
 
-static int trie_search_all(Trie *trie, const AlphaChar *text, zval *data)
+
+static int trie_search_all(Trie *trie, AlphaChar *text, zval *data, long opt)
 {
 	TrieState *s;
-	const AlphaChar *p;
+	AlphaChar *p;
 	const AlphaChar *base;
     //zval *word = NULL;
 
@@ -193,25 +203,29 @@ static int trie_search_all(Trie *trie, const AlphaChar *text, zval *data)
         return -1;
     }
 
-    while (*text) {   
-        p = text;
-        if(! trie_state_is_walkable(s, *p)) {
-            trie_state_rewind(s);
-            text++;
-            continue;
-        }
+    while (*text) {
+			TRIE_SEARCH_ALPHA_PROC(text, opt);
 
-        while(*p && trie_state_is_walkable(s, *p) && ! trie_state_is_leaf(s)) {
-            trie_state_walk(s, *p++);  
+			if(! trie_state_is_walkable(s, *text)) {
+				 trie_state_rewind(s);
+				 text++;
+				 continue;
+			}
+			
+			p = text;
+			
+			while(*p && trie_state_is_walkable(s, *p) && ! trie_state_is_leaf(s)) {
+            trie_state_walk(s, *p++);
             if (trie_state_is_terminal(s)) { 
-                //MAKE_STD_ZVAL(word);
-                //array_init_size(word, 3);
-                add_next_index_long(data, text - base);
-                add_next_index_long(data, p - text);
-				add_next_index_long(data, trie_state_get_terminal_data(s));
-                //add_next_index_zval(data, word);        
-            }
-        }
+					//MAKE_STD_ZVAL(word);
+					//array_init_size(word, 3);
+					add_next_index_long(data, text - base);
+					add_next_index_long(data, p - text);
+					add_next_index_long(data, trie_state_get_terminal_data(s));
+					 //add_next_index_zval(data, word);        
+					}
+				TRIE_SEARCH_ALPHA_PROC(p, opt);
+				}
         trie_state_rewind(s);
         text++;
     }
@@ -272,12 +286,13 @@ PHP_FUNCTION(trie_filter_search)
 	unsigned char *text;
 
 	int text_len, offset = -1, i, ret;
-    TrieData length = 0, data;
-
+   TrieData length = 0, data;
+	long opt=0;
+	
 	AlphaChar *alpha_text;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs", 
-				&trie_resource, &text, &text_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs|l", 
+				&trie_resource, &text, &text_len, &opt) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -298,7 +313,7 @@ PHP_FUNCTION(trie_filter_search)
 
 	alpha_text[text_len] = TRIE_CHAR_TERM;
 
-	ret = trie_search_one(trie, alpha_text, &offset, &length, &data);
+	ret = trie_search_one(trie, alpha_text, &offset, &length, &data, opt);
     efree(alpha_text);
 	if (ret == 0) {
         return;
@@ -320,11 +335,12 @@ PHP_FUNCTION(trie_filter_search_all)
 	zval *trie_resource;
 	unsigned char *text;
 	int text_len, i, ret;
+	long opt=0;
 
 	AlphaChar *alpha_text;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs", 
-				&trie_resource, &text, &text_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs|l", 
+				&trie_resource, &text, &text_len, &opt) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -342,10 +358,10 @@ PHP_FUNCTION(trie_filter_search_all)
 	for (i = 0; i < text_len; i++) {
 		alpha_text[i] = (AlphaChar) text[i];
 	}
-
+	
 	alpha_text[text_len] = TRIE_CHAR_TERM;
 
-	ret = trie_search_all(trie, alpha_text, return_value);
+	ret = trie_search_all(trie, alpha_text, return_value, opt);
     efree(alpha_text);
 	if (ret == 0) {
         return;
@@ -383,7 +399,7 @@ PHP_FUNCTION(trie_filter_new)
 }
 /* }}} */
 
-#define KEYWORD_MAX_LEN 1024
+
 /* {{{ proto bool trie_filter_store(int trie_tree_identifier, int anyData, string keyword)
    Returns true, or false on error*/
 PHP_FUNCTION(trie_filter_store)
@@ -392,11 +408,12 @@ PHP_FUNCTION(trie_filter_store)
 	zval *trie_resource;
 	unsigned char *keyword, *p;
 	int keyword_len, i;
+	long opt=0;
 	TrieData data;
     AlphaChar alpha_key[KEYWORD_MAX_LEN+1];
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rls", 
-				&trie_resource, &data, &keyword, &keyword_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rls|l", 
+				&trie_resource, &data, &keyword, &keyword_len, &opt) == FAILURE) {
 		RETURN_FALSE;
 	}
     if (keyword_len > KEYWORD_MAX_LEN || keyword_len < 1) {
@@ -406,10 +423,23 @@ PHP_FUNCTION(trie_filter_store)
 	ZEND_FETCH_RESOURCE(trie, Trie *, &trie_resource, -1, PHP_TRIE_FILTER_RES_NAME, le_trie_filter);
     p = keyword;
     i = 0;
-    while (*p && *p != '\n' && *p != '\r') {
-        alpha_key[i++] = (AlphaChar)*p;
-        p++;
-    }
+
+	while (*p && *p != '\n' && *p != '\r') {
+		if((opt & TRIE_FILTER_SP) && *p == ' '){
+			p++;
+			continue;
+			}
+		alpha_key[i] = (AlphaChar)*p;
+		if((opt & TRIE_FILTER_UP) && alpha_key[i]>96 && alpha_key[i]<123){
+			alpha_key[i]-=32;
+			}
+		if((opt & TRIE_FILTER_NUM) && alpha_key[i]>47 && alpha_key[i]<58){
+			alpha_key[i]=48;
+			}
+		i++;
+		p++;
+	}
+	 
     alpha_key[i] = TRIE_CHAR_TERM;
     if (! trie_store(trie, alpha_key, data)) {
         RETURN_FALSE;
