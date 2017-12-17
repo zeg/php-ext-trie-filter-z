@@ -148,91 +148,89 @@ PHP_FUNCTION(trie_filter_load)
 
 static int trie_search_one(Trie *trie, AlphaChar *text, int *offset, TrieData *length, TrieData *data, long opt)
 {
-	TrieState *s;
-	AlphaChar *p;
-	const AlphaChar *base;
+TrieState *s;
+AlphaChar *p;
+const AlphaChar *base;
 
-	base = text;
-    if (! (s = trie_root(trie))) {
-        return -1;
-    }
+base = text;
+if (! (s = trie_root(trie)))
+	return -1;
 
-	while (*text) {
-		TRIE_SEARCH_ALPHA_PROC(text, opt);
-		p = text;
-		if (! trie_state_is_walkable(s, *p)) {
-            trie_state_rewind(s);
-			text++;
-			continue;
-		} else {
-			trie_state_walk(s, *p++);
-        }
-
-		while (trie_state_is_walkable(s, *p) && ! trie_state_is_terminal(s)){
-			trie_state_walk(s, *p++);
-			TRIE_SEARCH_ALPHA_PROC(p, opt);
-			}
-
-		if (trie_state_is_terminal(s)) {
-			*offset = text - base;
-			*length = p - text;
-			*data = trie_state_get_terminal_data(s);
-            trie_state_free(s);
-            
-			return 1;
+while (*text) {
+	TRIE_SEARCH_ALPHA_PROC(text, opt);
+	p = text;
+	if (! trie_state_is_walkable(s, *p)) {
+		trie_state_rewind(s);
+		TRIE_SEARCH_MB_NEXT(text,opt);
+		continue;
+		} 
+	else {
+		trie_state_walk(s, *p++);
 		}
 
-        trie_state_rewind(s);
-		text++;
-	}
-    trie_state_free(s);
+	while (trie_state_is_walkable(s, *p) && ! trie_state_is_terminal(s)){
+		trie_state_walk(s, *p++);
+		TRIE_SEARCH_ALPHA_PROC(p, opt);
+		}
 
-	return 0;
-}
+	if (trie_state_is_terminal(s)) {
+		*offset = text - base;
+		*length = p - text;
+		*data = trie_state_get_terminal_data(s);
+		trie_state_free(s);
+		return 1;
+		}
+
+	trie_state_rewind(s);
+	TRIE_SEARCH_MB_NEXT(text,opt);
+	}
+trie_state_free(s);
+
+return 0;
+}//fe
 
 
 static int trie_search_all(Trie *trie, AlphaChar *text, zval *data, long opt)
 {
-	TrieState *s;
-	AlphaChar *p;
-	const AlphaChar *base;
-    //zval *word = NULL;
+TrieState *s;
+AlphaChar *p;
+const AlphaChar *base;
+//zval *word = NULL;
 
-	base = text;
-    if (! (s = trie_root(trie))) {
-        return -1;
-    }
+base = text;
+if (! (s = trie_root(trie)))
+	return -1;
 
-    while (*text) {
-			TRIE_SEARCH_ALPHA_PROC(text, opt);
+while (*text) {
+	TRIE_SEARCH_ALPHA_PROC(text, opt);
 
-			if(! trie_state_is_walkable(s, *text)) {
-				 trie_state_rewind(s);
-				 text++;
-				 continue;
+	if(! trie_state_is_walkable(s, *text)) {
+		trie_state_rewind(s);
+		TRIE_SEARCH_MB_NEXT(text,opt);
+		continue;
+		}
+
+	p = text;
+
+	while(*p && trie_state_is_walkable(s, *p) && ! trie_state_is_leaf(s)) {
+	trie_state_walk(s, *p++);
+	if (trie_state_is_terminal(s)) { 
+			//MAKE_STD_ZVAL(word);
+			//array_init_size(word, 3);
+			add_next_index_long(data, text - base);
+			add_next_index_long(data, p - text);
+			add_next_index_long(data, trie_state_get_terminal_data(s));
+			//add_next_index_zval(data, word);
 			}
-			
-			p = text;
-			
-			while(*p && trie_state_is_walkable(s, *p) && ! trie_state_is_leaf(s)) {
-            trie_state_walk(s, *p++);
-            if (trie_state_is_terminal(s)) { 
-					//MAKE_STD_ZVAL(word);
-					//array_init_size(word, 3);
-					add_next_index_long(data, text - base);
-					add_next_index_long(data, p - text);
-					add_next_index_long(data, trie_state_get_terminal_data(s));
-					 //add_next_index_zval(data, word);        
-					}
-				TRIE_SEARCH_ALPHA_PROC(p, opt);
-				}
-        trie_state_rewind(s);
-        text++;
-    }
-    trie_state_free(s);
+		TRIE_SEARCH_ALPHA_PROC(p, opt);
+		}
+	trie_state_rewind(s);
+	TRIE_SEARCH_MB_NEXT(text,opt);
+	}
+trie_state_free(s);
 
-	return 0;
-}
+return 0;
+}//fe
 
 /*
 PHP_FUNCTION(trie_filter_retrieve)

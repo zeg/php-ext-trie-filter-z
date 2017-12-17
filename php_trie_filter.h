@@ -68,7 +68,7 @@ PHP_FUNCTION(trie_filter_free);
 #define TRIE_FILTER_UP 1
 #define TRIE_FILTER_SP 2
 #define TRIE_FILTER_NUM 4
-
+#define TRIE_FILTER_GB 8
 
 #define TRIE_SEARCH_ALPHA_PROC(p, opt) if(opt!=0){  \
 while((opt & TRIE_FILTER_SP) && *p==32){  \
@@ -81,6 +81,20 @@ if((opt & TRIE_FILTER_UP) && *p>96 && *p<123) \
 if((opt & TRIE_FILTER_NUM) && *p>47 && *p<58) \
 	(*p)=48; \
 }
+
+
+#define TRIE_SEARCH_MB_NEXT(p, opt) if(opt & TRIE_FILTER_GB){  \
+	if((*p>0x81 && *p<0xfe) && (*(p+1) && *(p+1)>0x40 && *(p+1)<0xfe && *(p+1)!=7f)) \
+		p+=2; \
+	else if((*p>0x81 && *p<0xfe) && (*(p+1) && *(p+1)>0x30 && *(p+1)<0x39) && (*(p+2) && *(p+2)>0x81 && *(p+2)<0xfe) && (*(p+3) && *(p+3)>0x30 && *(p+3)<0x39)) \
+		p+=4; \
+	else \
+		p++; \
+	} \
+else{ \
+	p++; \
+	}
+
 /*
  * Local variables:
  * tab-width: 4
