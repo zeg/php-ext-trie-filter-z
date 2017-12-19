@@ -69,6 +69,7 @@ PHP_FUNCTION(trie_filter_free);
 #define TRIE_FILTER_SP 2
 #define TRIE_FILTER_NUM 4
 #define TRIE_FILTER_GB 8
+#define TRIE_FILTER_PLOAD 1
 
 #define TRIE_CACHE_SIZE 100
 

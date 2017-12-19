@@ -102,6 +102,7 @@ PHP_MINIT_FUNCTION(trie_filter)
 	REGISTER_LONG_CONSTANT("TRIE_FILTER_SP", TRIE_FILTER_SP, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("TRIE_FILTER_NUM", TRIE_FILTER_NUM, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("TRIE_FILTER_GB", TRIE_FILTER_GB, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("TRIE_FILTER_PLOAD", TRIE_FILTER_PLOAD, CONST_CS | CONST_PERSISTENT);
 	return SUCCESS;
 }
 /* }}} */
@@ -134,7 +135,7 @@ PHP_FUNCTION(trie_filter_load)
 	char *path,*hash_key;
 	int path_len,hash_key_len;
 	long opt=0;
-	zend_rsrc_list_entry ex;
+	zend_rsrc_list_entry *ex;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l", 
 				&path, &path_len, &opt) == FAILURE) {
@@ -156,7 +157,7 @@ PHP_FUNCTION(trie_filter_load)
 		RETURN_NULL();
 		}
 	
-	if(opt&1){
+	if(opt & TRIE_FILTER_PLOAD){
 		zend_rsrc_list_entry le;
 		ZEND_REGISTER_RESOURCE(return_value, trie, le_trie_filter_p);
 		le.type = le_trie_filter_p;
