@@ -508,7 +508,7 @@ PHP_FUNCTION(trie_filter_free)
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &trie_resource) == FAILURE) {
         RETURN_FALSE;
     }
-    ZEND_FETCH_RESOURCE(trie, Trie *, &trie_resource, -1, PHP_TRIE_FILTER_RES_NAME, le_trie_filter);
+	ZEND_FETCH_RESOURCE2(trie, Trie *, &trie_resource, -1, PHP_TRIE_FILTER_RES_NAME, le_trie_filter, le_trie_filter_p);
 	zend_hash_index_del(&EG(regular_list), Z_RESVAL_P(trie_resource));
 	RETURN_TRUE;
     //resource_id = Z_RESVAL_P(trie_resource);

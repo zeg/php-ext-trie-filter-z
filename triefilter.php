@@ -10,9 +10,10 @@
  * Load a trie tree from a saved trie tree file
  * 
  * @param string $strDictFile Path to saved trie tree file
+ * @param int $flag TRIE_FILTER_PLOAD load once, keep in memory
  * @return resource The trie tree handler or NULL on error.
  */
-function trie_filter_load($strDictFile) {
+function trie_filter_load($strDictFile, $flag=0) {
 	
 }
 
@@ -24,6 +25,7 @@ function trie_filter_load($strDictFile) {
  * @param int $flag TRIE_FILTER_UP: all a-z char replace with A-Z
  *							TRIE_FILTER_SP: ignore space char
  *							TRIE_FILTER_NUM: char 0-9 replace with 0
+ *							TRIE_FILTER_GB: use this when you data in GB2312/GBK/GB18030 encode
  * @return array spam word info, like Array(0 => start position, 1 => spam word len, 2 => spam word anydata stored in trie_filter_store), if no one found, return empty array, false on error.
  * @example
  * <pre>
