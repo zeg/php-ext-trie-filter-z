@@ -342,9 +342,9 @@ PHP_FUNCTION(trie_filter_search)
 	if (ret == 0) {
         return;
     } else if (ret == 1) {
-		add_next_index_long(return_value, offset);
-		add_next_index_long(return_value, length);
-		add_next_index_long(return_value, data);
+		add_next_index_long(return_value, (long)offset);
+		add_next_index_long(return_value, (long)length);
+		add_next_index_long(return_value, (long)data);
 	} else {
         RETURN_FALSE;
     }
@@ -432,21 +432,24 @@ PHP_FUNCTION(trie_filter_store)
 	zval *trie_resource;
 	unsigned char *keyword, *p;
 	int keyword_len, i;
-	long opt=0;
+	long ldata,opt=0;
 	TrieData data;
     AlphaChar alpha_key[KEYWORD_MAX_LEN+1];
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rls|l", 
-				&trie_resource, &data, &keyword, &keyword_len, &opt) == FAILURE) {
+				&trie_resource, &ldata, &keyword, &keyword_len, &opt) == FAILURE) {
 		RETURN_FALSE;
 	}
     if (keyword_len > KEYWORD_MAX_LEN || keyword_len < 1) {
         php_error_docref(NULL TSRMLS_CC, E_WARNING, "keyword should has [1, %d] bytes", KEYWORD_MAX_LEN);
         RETURN_FALSE;
     }
+	
 	ZEND_FETCH_RESOURCE2(trie, Trie *, &trie_resource, -1, PHP_TRIE_FILTER_RES_NAME, le_trie_filter, le_trie_filter_p);
     p = keyword;
     i = 0;
+	
+	data = (int32)ldata;
 
 	while (*p && *p != '\n' && *p != '\r') {
 		if((opt & TRIE_FILTER_SP) && *p == ' '){
