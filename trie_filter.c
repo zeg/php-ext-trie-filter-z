@@ -243,9 +243,9 @@ while (*text) {
 	if (trie_state_is_terminal(s)) { 
 			//MAKE_STD_ZVAL(word);
 			//array_init_size(word, 3);
-			add_next_index_long(data, text - base);
-			add_next_index_long(data, p - text);
-			add_next_index_long(data, trie_state_get_terminal_data(s));
+			add_next_index_long(data, (long)(text - base));
+			add_next_index_long(data, (long)(p - text));
+			add_next_index_long(data, (long)trie_state_get_terminal_data(s));
 			//add_next_index_zval(data, word);
 			}
 		TRIE_SEARCH_ALPHA_PROC(p, opt);
