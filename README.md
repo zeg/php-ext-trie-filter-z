@@ -5,21 +5,25 @@ php extension for spam word filter based on Double-Array Trie tree, it can detec
 
 关键词过滤扩展 用于检查一段文本中是否出现关键词 基于Double-Array Trie 树实现 在大量关键词的情况下能保持较高的效率 
 
-搜索树可驻留内存 减少加载开销*
+搜索树可驻留内存 减少加载开销(1)
 
-有GB编码模式 GB系编码文本不会出现误匹配**
+有GB编码模式 GB系编码文本不会出现误匹配(2)
 
 搜索树中可储存关键字附加值 可用附加值作为关键字ID 便于做组合条件匹配
 
 
-* 每个php-fpm进程会服务若干次请求后销毁 
+(1) 每个php-fpm进程会服务若干次请求后销毁 
   持久加载只加载一次便可保留在内存中 在整个php-fpm进程生命周期内重复使用 减少了重复加载搜索树文件的开销
 
-** GB2312/GBK/GB18030编码因设计古旧 逐字节检查很容易出现相邻两字前后半连接刚好命中关键字的现象 造成误匹配(例如“面还”中间的两个字节是“婊”)
+(2) GB2312/GBK/GB18030编码因设计古旧 逐字节检查很容易出现相邻两字前后半连接刚好命中关键字的现象 造成误匹配(例如“面还”中间的两个字节是“婊”)
    目前常用的utf8编码设计更为科学 长字符中每个字节有不同的首位 从而杜绝了此种情况的发生(大概
 
 
 ## 升级历史
+
+### 2020-08-18
+
+修正在某些情况下使php-fpm产生Segmentation fault的错误
 
 ### 2017-12-19
 
@@ -41,22 +45,20 @@ php extension for spam word filter based on Double-Array Trie tree, it can detec
 
 详见使用示例
 
-### 2013-06-23
-trie_filter_search_all，一次返回所有的命中词;修复内存泄露
+fork from https://github.com/wulijun/php-ext-trie-filter
+
 
 ## 依赖库
 
 修改过的[libdatrie](https://github.com/zeg/libdatrie-z)
-
-包含有 https://github.com/kmike/datrie/ 中的trie_state_get_terminal_data函数
 
 ## 安装步骤
 
 下面的$LIB_PATH为依赖库安装目录，$INSTALL_PHP_PATH为PHP5安装目录。
 
 ### 安装libdatrie
-    $ tar zxvf libdatrie-0.2.4.tar.gz
-    $ cd libdatrie-0.2.4
+    $ tar zxvf libdatrie-z-master.tar.gz
+    $ cd libdatrie-z-master
     $ make clean
     $ ./configure --prefix=$LIB_PATH
     $ make
@@ -77,7 +79,7 @@ trie_filter_search_all，一次返回所有的命中词;修复内存泄露
 	
 	foreach ($arrWord as $k => $v)
     	trie_filter_store($resTrie, $k, $v);
-		//$k为对应此关键字的任意int32附加值 会在trie_filter_search/trie_filter_search_all结果中返回
+		//使用关键字在数组$arrWord中的key为附加值 会在trie_filter_search/trie_filter_search_all结果中返回
 	
 	trie_filter_save($resTrie, __DIR__ . '/blackword.tree');
 
@@ -94,7 +96,7 @@ trie_filter_search_all，一次返回所有的命中词;修复内存泄露
 	print_r($arrRet); //Array(
 	// 0 => 6, 第一个命中词的起始位置
 	// 1 => 5, 第一个命中词的长度
-	// 2 => 1 ,第一个命中词的附加值
+	// 2 => 1 ,第一个命中词的附加值(关键词的key)
 	// 3 => 12, 第二个...
 	// 4 => 5 , 第二个...
 	// 5 => 0   第二个...
