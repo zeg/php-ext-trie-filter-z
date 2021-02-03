@@ -82,7 +82,7 @@ PHP_INI_END()
 */
 /* }}} */
 
-static void php_trie_filter_dtor(zend_rsrc_list_entry *rsrc TSRMLS_DC)
+static void php_trie_filter_dtor(zend_resource *rsrc TSRMLS_DC)
 {
 	Trie *trie = (Trie *)rsrc->ptr;
 	trie_free(trie);
@@ -132,20 +132,21 @@ PHP_MINFO_FUNCTION(trie_filter)
 PHP_FUNCTION(trie_filter_load)
 {
 	Trie *trie;
-	char *path,*hash_key;
+	char *path;
+	zend_string *hash_key;
 	int path_len,hash_key_len;
 	long opt=0;
-	zend_rsrc_list_entry *ex;
+	zval *ex;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l", 
 				&path, &path_len, &opt) == FAILURE) {
 		RETURN_NULL();
 	}
 
-	hash_key_len = spprintf(&hash_key, 0, "trie_filter:%s:%ld", path, opt);
-	if (zend_hash_find(&EG(persistent_list), hash_key, hash_key_len + 1, (void **)&ex) == SUCCESS){
-		ZEND_REGISTER_RESOURCE(return_value, ex->ptr, le_trie_filter_p);
-		efree(hash_key);
+	hash_key = strpprintf( 0, "trie_filter:%s:%ld", path, opt);
+	if ((ex = zend_hash_find(&EG(persistent_list), hash_key )) != NULL){
+		RETURN_RES(zend_register_resource(Z_RES_P(ex)->ptr, le_trie_filter_p));
+		zend_string_release(hash_key);
 		return;
 		}
 
@@ -155,18 +156,23 @@ PHP_FUNCTION(trie_filter_load)
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, 
 				"Unable to load %s", path);
 		RETURN_NULL();
+		zend_string_release(hash_key);
+		return;
 		}
 	
 	if(opt & TRIE_FILTER_PLOAD){
-		zend_rsrc_list_entry le;
-		ZEND_REGISTER_RESOURCE(return_value, trie, le_trie_filter_p);
+		zval lec;
+		zend_resource le;
+		RETURN_RES(zend_register_resource(trie, le_trie_filter_p));
 		le.type = le_trie_filter_p;
 		le.ptr = trie;
-		zend_hash_update(&EG(persistent_list), hash_key, hash_key_len + 1,(void*)&le, sizeof(zend_rsrc_list_entry), NULL);
-		efree(hash_key);
+		ZVAL_RES(&lec, &le);
+		zend_hash_update_ptr(&EG(persistent_list), hash_key, &lec);
 		}
 	else
-		ZEND_REGISTER_RESOURCE(return_value, trie, le_trie_filter);
+		RETURN_RES(zend_register_resource(trie, le_trie_filter));
+
+	zend_string_release(hash_key);
 
 }
 /* }}} */
@@ -323,11 +329,12 @@ PHP_FUNCTION(trie_filter_search)
     array_init(return_value);
     if (text_len < 1 || strlen(text) != text_len) {
 		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "input is empty");
-		return;
+		RETURN_FALSE;
 	}
 
-	ZEND_FETCH_RESOURCE2(trie, Trie *, &trie_resource, -1, 
-			PHP_TRIE_FILTER_RES_NAME, le_trie_filter, le_trie_filter_p);
+	if( (trie = (Trie *)zend_fetch_resource2(Z_RES_P(trie_resource), PHP_TRIE_FILTER_RES_NAME, le_trie_filter, le_trie_filter_p)) == NULL){
+		RETURN_FALSE;
+		}
 
 	alpha_text = emalloc(sizeof(AlphaChar) * text_len + 1);
 
@@ -366,16 +373,17 @@ PHP_FUNCTION(trie_filter_search_all)
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs|l", 
 				&trie_resource, &text, &text_len, &opt) == FAILURE) {
 		RETURN_FALSE;
-	}
+		}
 
-    array_init(return_value);
-    if (text_len < 1 || strlen(text) != text_len) {
+	array_init(return_value);
+	if (text_len < 1 || strlen(text) != text_len) {
 		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "input is empty");
 		return;
-	}
+		}
 
-	ZEND_FETCH_RESOURCE2(trie, Trie *, &trie_resource, -1, 
-			PHP_TRIE_FILTER_RES_NAME, le_trie_filter, le_trie_filter_p);
+	if( (trie = (Trie *)zend_fetch_resource2(Z_RES_P(trie_resource), PHP_TRIE_FILTER_RES_NAME, le_trie_filter, le_trie_filter_p)) == NULL){
+		RETURN_FALSE;
+		}
 
 	alpha_text = emalloc(sizeof(AlphaChar) * text_len + 1);
 
@@ -386,12 +394,12 @@ PHP_FUNCTION(trie_filter_search_all)
 	alpha_text[text_len] = TRIE_CHAR_TERM;
 
 	ret = trie_search_all(trie, alpha_text, return_value, opt);
-    efree(alpha_text);
+	efree(alpha_text);
 	if (ret == 0) {
-        return;
+		return;
 	} else {
-        RETURN_FALSE;
-    }
+		RETURN_FALSE;
+	}
 }
 /* }}} */
 
@@ -419,7 +427,7 @@ PHP_FUNCTION(trie_filter_new)
     if (! trie) {      
         RETURN_NULL();
     }
-    ZEND_REGISTER_RESOURCE(return_value, trie, le_trie_filter);
+	RETURN_RES(zend_register_resource(trie, le_trie_filter));
 }
 /* }}} */
 
@@ -445,7 +453,14 @@ PHP_FUNCTION(trie_filter_store)
         RETURN_FALSE;
     }
 	
-	ZEND_FETCH_RESOURCE2(trie, Trie *, &trie_resource, -1, PHP_TRIE_FILTER_RES_NAME, le_trie_filter, le_trie_filter_p);
+	//	ZEND_FETCH_RESOURCE2(trie, Trie *, &trie_resource, -1, 
+	//		PHP_TRIE_FILTER_RES_NAME, le_trie_filter, le_trie_filter_p);
+
+	if( (trie = (Trie *)zend_fetch_resource2(Z_RES_P(trie_resource), PHP_TRIE_FILTER_RES_NAME, le_trie_filter, le_trie_filter_p)) == NULL){
+		RETURN_FALSE;
+		}
+
+
     p = keyword;
     i = 0;
 	
@@ -484,19 +499,21 @@ PHP_FUNCTION(trie_filter_save)
     unsigned char *filename;
     int filename_len;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs", 
-                &trie_resource, &filename, &filename_len) == FAILURE) {
-        RETURN_FALSE;
-    }
-    if (filename_len < 1 || strlen(filename) != filename_len) {
-        php_error_docref(NULL TSRMLS_CC, E_WARNING, "save path required");
-        RETURN_FALSE;
-    }
-    ZEND_FETCH_RESOURCE2(trie, Trie *, &trie_resource, -1, PHP_TRIE_FILTER_RES_NAME, le_trie_filter, le_trie_filter_p);
-    if (trie_save(trie, filename)) {
-        RETURN_FALSE;
-    }
-    RETURN_TRUE;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs", 
+				&trie_resource, &filename, &filename_len) == FAILURE) {
+		RETURN_FALSE;
+		}
+	if (filename_len < 1 || strlen(filename) != filename_len) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "save path required");
+		RETURN_FALSE;
+		}
+	if( (trie = (Trie *)zend_fetch_resource2(Z_RES_P(trie_resource), PHP_TRIE_FILTER_RES_NAME, le_trie_filter, le_trie_filter_p)) == NULL ){
+		RETURN_FALSE;
+		}
+	if (trie_save(trie, filename)) {
+		RETURN_FALSE;
+		}
+	RETURN_TRUE;
 }
 /* }}} */
 
@@ -510,8 +527,12 @@ PHP_FUNCTION(trie_filter_free)
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &trie_resource) == FAILURE) {
         RETURN_FALSE;
-    }
-	ZEND_FETCH_RESOURCE2(trie, Trie *, &trie_resource, -1, PHP_TRIE_FILTER_RES_NAME, le_trie_filter, le_trie_filter_p);
+    	}
+	
+	if( (trie = (Trie *)zend_fetch_resource2(Z_RES_P(trie_resource), PHP_TRIE_FILTER_RES_NAME, le_trie_filter, le_trie_filter_p) ) == NULL){
+		RETURN_FALSE;
+		}
+
 	zend_hash_index_del(&EG(regular_list), Z_RESVAL_P(trie_resource));
 	RETURN_TRUE;
     //resource_id = Z_RESVAL_P(trie_resource);
